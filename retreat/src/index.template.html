@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The AI Compass — Retreat Edition</title>
+<meta name="robots" content="noindex" />
+<!-- Inline SVG data URI, not a file: the page must stay self-contained (a test
+     fails the build if anything is fetched from another host). Miniature of the
+     compass itself — dashed axes, two tinted territories, your dot. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a1a2e'/%3E%3Cpath d='M16.8 4.8h10.4v10.4H16.8z' fill='%23ffdc64' opacity='.22'/%3E%3Cpath d='M16 5v22M5 16h22' stroke='%23fff' stroke-opacity='.26' stroke-width='1.5'/%3E%3Ccircle cx='21.4' cy='10.6' r='5.8' fill='%23ffdc64' stroke='%231a1a2e' stroke-width='1.5'/%3E%3C/svg%3E" />
+<link rel="mask-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 5v22M5 16h22' stroke='black' stroke-width='2'/%3E%3Ccircle cx='21.4' cy='10.6' r='6' fill='black'/%3E%3C/svg%3E" color="#ffdc64" />
+<meta property="og:title" content="The AI Compass" />
+<meta property="og:description" content="Where does the room land on AI?" />
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #1a1a2e; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; }
+  button { font: inherit; }
+  #root { min-height: 100vh; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; }
+  .wrap { max-width: 560px; width: 100%; }
+  h1 { font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 4px; }
+  .sub { text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 6px; }
+  .hint { text-align: center; color: rgba(255,220,100,0.55); font-size: 12px; margin: 0 0 26px; }
+  .scopenote { font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,.45);
+    background: rgba(255,255,255,.04); border-left: 2px solid rgba(255,220,100,.35);
+    padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 0 0 22px; }
+  .scopenote strong { color: rgba(255,255,255,.72); font-weight: 600; }
+  .bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-bottom: 36px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#ffdc64,#e8a030);
+    border-radius: 2px; transition: width .3s ease; }
+  .topic { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: rgba(255,220,100,.5); margin-bottom: 6px; }
+  .count { font-size: 12px; color: rgba(255,255,255,.25); margin-bottom: 10px; font-family: ui-monospace, monospace; }
+  .prompt { font-size: 18px; font-weight: 600; line-height: 1.45; margin-bottom: 24px; min-height: 48px; }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+  .opt { padding: 11px 16px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px; color: rgba(255,255,255,.7); font-size: 14px; line-height: 1.45;
+    cursor: pointer; text-align: left; transition: background .12s, border-color .12s, color .12s; }
+  .opt:hover { background: rgba(255,255,255,.06); }
+  .opt[aria-pressed="true"] { background: rgba(255,220,100,.12); border-color: rgba(255,220,100,.4);
+    color: #ffdc64; font-weight: 600; }
+  .multihint { font-size: 12px; color: rgba(255,255,255,.3); margin: -14px 0 12px; }
+  .opt.none { color: rgba(255,255,255,.45); font-style: italic; border-style: dashed; }
+  .opt.none[aria-pressed="true"] { color: #ffdc64; font-style: normal; border-style: solid; }
+  .nav { display: flex; justify-content: space-between; align-items: center; }
+  .ghost { background: none; border: none; color: rgba(255,255,255,.5); font-size: 14px; cursor: pointer; padding: 8px 0; }
+  .ghost:disabled { color: rgba(255,255,255,.12); cursor: default; }
+  .btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff;
+    padding: 9px 22px; border-radius: 7px; font-size: 14px; cursor: pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); }
+  .cta { background: linear-gradient(135deg,#ffdc64,#e8a030); border: none; color: #1a1a2e;
+    padding: 10px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .cta:disabled { opacity: .45; cursor: default; }
+  .card { margin: 20px auto 0; padding: 24px 28px; background: rgba(255,255,255,.04);
+    border-radius: 12px; max-width: 460px; text-align: left; }
+  .eyebrow { font-size: 13px; color: rgba(255,255,255,.35); margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .aname { font-size: 27px; font-weight: 700; margin-bottom: 2px; line-height: 1.2; }
+  .saint { font-size: 14px; color: rgba(255,255,255,.5); margin-bottom: 12px; font-style: italic; }
+  .adesc { font-size: 15px; color: rgba(255,255,255,.72); line-height: 1.6; }
+  .linkish { background: none; border: none; padding: 0; font-size: 12px; font-style: normal;
+    color: rgba(255,220,100,.65); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .linkish:hover { color: #ffdc64; }
+  .saintlink { color: rgba(255,255,255,.62); text-decoration: underline;
+    text-underline-offset: 2px; text-decoration-color: rgba(255,255,255,.25); }
+  .saintlink:hover { color: #ffdc64; text-decoration-color: rgba(255,220,100,.6); }
+  .fieldhint { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,.38); }
+  .alllist { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .allrow { display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,.04);
+    border-radius: 10px; align-items: flex-start; border: 1px solid transparent; }
+  .allrow.on { border-color: rgba(255,220,100,.45); background: rgba(255,220,100,.07); }
+  .allnum { flex-shrink: 0; width: 24px; text-align: right; font-family: ui-monospace, monospace;
+    font-size: 13px; color: rgba(255,255,255,.4); padding-top: 2px; }
+  .allswatch { flex-shrink: 0; width: 12px; height: 12px; border-radius: 3px; margin-top: 5px; }
+  .allname { font-size: 17px; font-weight: 700; line-height: 1.25; }
+  .coords { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 12px; color: rgba(255,255,255,.3); font-family: ui-monospace, monospace; }
+  label { display: block; font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+  input[type=text] { width: 100%; padding: 11px 14px; background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 8px; color: #fff; font-size: 15px; }
+  input[type=text]:focus { outline: 2px solid rgba(255,220,100,.5); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .joinbox { margin: 22px auto 0; max-width: 460px; padding: 20px 22px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,220,100,.2); border-radius: 12px; }
+  .status { text-align: center; font-size: 12px; color: rgba(255,255,255,.35); margin-top: 14px; min-height: 16px; }
+  .status.err { color: #ff8f7a; }
+  .roster { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 8px;
+    background: rgba(255,255,255,.05); border-radius: 999px; font-size: 13px; color: rgba(255,255,255,.75); }
+  .chip > i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .chip.me { background: rgba(255,220,100,.14); color: #ffdc64; font-weight: 600; }
+  canvas { display: block; touch-action: manipulation; }
+  .board #root { padding: 24px 16px; }
+  .board .wrap { max-width: 900px; }
+  .roomcode { font-family: ui-monospace, monospace; letter-spacing: .12em; color: #ffdc64; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>

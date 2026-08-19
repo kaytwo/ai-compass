@@ -1,0 +1,17 @@
+name = "ai-compass-retreat"
+main = "src/worker.js"
+compatibility_date = "2025-08-16"
+
+# Static app is served straight from public/ (built by `npm run build`).
+# Nothing is fetched from a CDN at runtime, which matters on conference wifi.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Created with `npx wrangler d1 create ai-compass-retreat`.
+# Apply the schema with `npm run migrate` (and `npm run migrate:local` for dev).
+[[d1_databases]]
+binding = "DB"
+database_name = "ai-compass-retreat"
+database_id = "66436c12-abda-4111-823c-65bd709187e6"
+migrations_dir = "migrations"

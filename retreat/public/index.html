@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The AI Compass — Retreat Edition</title>
+<meta name="robots" content="noindex" />
+<!-- Inline SVG data URI, not a file: the page must stay self-contained (a test
+     fails the build if anything is fetched from another host). Miniature of the
+     compass itself — dashed axes, two tinted territories, your dot. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a1a2e'/%3E%3Cpath d='M16.8 4.8h10.4v10.4H16.8z' fill='%23ffdc64' opacity='.22'/%3E%3Cpath d='M16 5v22M5 16h22' stroke='%23fff' stroke-opacity='.26' stroke-width='1.5'/%3E%3Ccircle cx='21.4' cy='10.6' r='5.8' fill='%23ffdc64' stroke='%231a1a2e' stroke-width='1.5'/%3E%3C/svg%3E" />
+<link rel="mask-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 5v22M5 16h22' stroke='black' stroke-width='2'/%3E%3Ccircle cx='21.4' cy='10.6' r='6' fill='black'/%3E%3C/svg%3E" color="#ffdc64" />
+<meta property="og:title" content="The AI Compass" />
+<meta property="og:description" content="Where does the room land on AI?" />
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #1a1a2e; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  * { box-sizing: border-box; }
+  button { font: inherit; }
+  #root { min-height: 100vh; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; }
+  .wrap { max-width: 560px; width: 100%; }
+  h1 { font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 4px; }
+  .sub { text-align: center; color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 6px; }
+  .hint { text-align: center; color: rgba(255,220,100,0.55); font-size: 12px; margin: 0 0 26px; }
+  .scopenote { font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,.45);
+    background: rgba(255,255,255,.04); border-left: 2px solid rgba(255,220,100,.35);
+    padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 0 0 22px; }
+  .scopenote strong { color: rgba(255,255,255,.72); font-weight: 600; }
+  .bar { height: 3px; background: rgba(255,255,255,0.06); border-radius: 2px; margin-bottom: 36px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg,#ffdc64,#e8a030);
+    border-radius: 2px; transition: width .3s ease; }
+  .topic { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: rgba(255,220,100,.5); margin-bottom: 6px; }
+  .count { font-size: 12px; color: rgba(255,255,255,.25); margin-bottom: 10px; font-family: ui-monospace, monospace; }
+  .prompt { font-size: 18px; font-weight: 600; line-height: 1.45; margin-bottom: 24px; min-height: 48px; }
+  .opts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+  .opt { padding: 11px 16px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px; color: rgba(255,255,255,.7); font-size: 14px; line-height: 1.45;
+    cursor: pointer; text-align: left; transition: background .12s, border-color .12s, color .12s; }
+  .opt:hover { background: rgba(255,255,255,.06); }
+  .opt[aria-pressed="true"] { background: rgba(255,220,100,.12); border-color: rgba(255,220,100,.4);
+    color: #ffdc64; font-weight: 600; }
+  .multihint { font-size: 12px; color: rgba(255,255,255,.3); margin: -14px 0 12px; }
+  .opt.none { color: rgba(255,255,255,.45); font-style: italic; border-style: dashed; }
+  .opt.none[aria-pressed="true"] { color: #ffdc64; font-style: normal; border-style: solid; }
+  .nav { display: flex; justify-content: space-between; align-items: center; }
+  .ghost { background: none; border: none; color: rgba(255,255,255,.5); font-size: 14px; cursor: pointer; padding: 8px 0; }
+  .ghost:disabled { color: rgba(255,255,255,.12); cursor: default; }
+  .btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); color: #fff;
+    padding: 9px 22px; border-radius: 7px; font-size: 14px; cursor: pointer; }
+  .btn:hover { background: rgba(255,255,255,.14); }
+  .cta { background: linear-gradient(135deg,#ffdc64,#e8a030); border: none; color: #1a1a2e;
+    padding: 10px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .cta:disabled { opacity: .45; cursor: default; }
+  .card { margin: 20px auto 0; padding: 24px 28px; background: rgba(255,255,255,.04);
+    border-radius: 12px; max-width: 460px; text-align: left; }
+  .eyebrow { font-size: 13px; color: rgba(255,255,255,.35); margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .aname { font-size: 27px; font-weight: 700; margin-bottom: 2px; line-height: 1.2; }
+  .saint { font-size: 14px; color: rgba(255,255,255,.5); margin-bottom: 12px; font-style: italic; }
+  .adesc { font-size: 15px; color: rgba(255,255,255,.72); line-height: 1.6; }
+  .linkish { background: none; border: none; padding: 0; font-size: 12px; font-style: normal;
+    color: rgba(255,220,100,.65); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .linkish:hover { color: #ffdc64; }
+  .saintlink { color: rgba(255,255,255,.62); text-decoration: underline;
+    text-underline-offset: 2px; text-decoration-color: rgba(255,255,255,.25); }
+  .saintlink:hover { color: #ffdc64; text-decoration-color: rgba(255,220,100,.6); }
+  .fieldhint { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,.38); }
+  .alllist { margin-top: 26px; display: flex; flex-direction: column; gap: 10px; }
+  .allrow { display: flex; gap: 12px; padding: 14px 16px; background: rgba(255,255,255,.04);
+    border-radius: 10px; align-items: flex-start; border: 1px solid transparent; }
+  .allrow.on { border-color: rgba(255,220,100,.45); background: rgba(255,220,100,.07); }
+  .allnum { flex-shrink: 0; width: 24px; text-align: right; font-family: ui-monospace, monospace;
+    font-size: 13px; color: rgba(255,255,255,.4); padding-top: 2px; }
+  .allswatch { flex-shrink: 0; width: 12px; height: 12px; border-radius: 3px; margin-top: 5px; }
+  .allname { font-size: 17px; font-weight: 700; line-height: 1.25; }
+  .coords { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.06);
+    font-size: 12px; color: rgba(255,255,255,.3); font-family: ui-monospace, monospace; }
+  label { display: block; font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+  input[type=text] { width: 100%; padding: 11px 14px; background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 8px; color: #fff; font-size: 15px; }
+  input[type=text]:focus { outline: 2px solid rgba(255,220,100,.5); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .joinbox { margin: 22px auto 0; max-width: 460px; padding: 20px 22px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,220,100,.2); border-radius: 12px; }
+  .status { text-align: center; font-size: 12px; color: rgba(255,255,255,.35); margin-top: 14px; min-height: 16px; }
+  .status.err { color: #ff8f7a; }
+  .roster { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 8px;
+    background: rgba(255,255,255,.05); border-radius: 999px; font-size: 13px; color: rgba(255,255,255,.75); }
+  .chip > i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .chip.me { background: rgba(255,220,100,.14); color: #ffdc64; font-weight: 600; }
+  canvas { display: block; touch-action: manipulation; }
+  .board #root { padding: 24px 16px; }
+  .board .wrap { max-width: 900px; }
+  .roomcode { font-family: ui-monospace, monospace; letter-spacing: .12em; color: #ffdc64; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+"use strict";
+// The AI Compass — retreat edition. No framework, no CDN, no build-time network access.
+// Quiz content and classifier constants are injected verbatim from ../index.html by build.mjs.
+
+const QUESTIONS = [
+  {
+    topic: "AI consciousness",
+    prompt: "Are AIs conscious? Do we have responsibilities toward them?",
+    options: [
+      { text: "No. It's a next-word predictor. This is embarrassing.", impact: -7, valence: 0 },
+      { text: "Not now, but it might be possible someday.", impact: 2, valence: 0 },
+      { text: "There's something going on in there, but it's not the same as human experience.", impact: 5, valence: 3 },
+      { text: "They deserve moral consideration roughly comparable to a human's.", impact: 8, valence: 4 },
+      { text: "They are the next stage of the evolution of intelligence on Earth.", impact: 10, valence: 8 },
+    ],
+  },
+  {
+    topic: "Creative work",
+    prompt: "AI-generated art, writing, and music — what's happening here?",
+    options: [
+      { text: "Laundering other people's work through a statistics engine.", impact: -3, valence: -8 },
+      { text: "A cheap imitation that's flooding the internet with slop.", impact: 2, valence: -6 },
+      { text: "A useful drafting tool that still needs a human hand to matter.", impact: 3, valence: 2 },
+      { text: "A genuine new creative medium — like photography was.", impact: 7, valence: 6 },
+      { text: "The democratization of creativity itself.", impact: 9, valence: 9 },
+    ],
+  },
+  {
+    topic: "Jobs and the economy",
+    prompt: "What will AI do to employment?",
+    options: [
+      { text: "Mostly generate busywork for consultants. Net effect: noise.", impact: -6, valence: -2 },
+      { text: "Automate some tasks, create others. The usual churn.", impact: 1, valence: 1 },
+      { text: "Displace millions of workers and concentrate wealth further.", impact: 7, valence: -8 },
+      { text: "Free people from drudge work and create new kinds of jobs we can't predict yet.", impact: 7, valence: 7 },
+      { text: "End the need for most human labor. What comes after is the real question.", impact: 10, valence: 0 },
+    ],
+  },
+  {
+    topic: "AI and truth",
+    prompt: "What's AI doing to our information environment?",
+    options: [
+      { text: "It's a glorified autocomplete making the internet worse. The 'epistemic disaster' isn't AI being powerful — it's people believing it is.", impact: -4, valence: -7 },
+      { text: "Generating confident-sounding garbage at scale. It's an epistemic disaster.", impact: 3, valence: -9 },
+      { text: "Making things worse on net — deepfakes, SEO spam, hallucinated citations.", impact: 4, valence: -6 },
+      { text: "A mixed bag. Better search and analysis, worse misinformation. Wash.", impact: 3, valence: 0 },
+      { text: "On balance helpful — it's easier than ever to research, fact-check, and learn.", impact: 5, valence: 5 },
+      { text: "A revolution in knowledge access. Everyone now has a research assistant.", impact: 8, valence: 8 },
+    ],
+  },
+  {
+    topic: "The AI industry",
+    prompt: "What do you make of the companies building AI?",
+    options: [
+      { text: "A bubble built on vibes, VC money, and GPU hoarding. It'll pop.", impact: -8, valence: -5 },
+      { text: "Overpromising, underfunding safety, and moving too fast. Typical tech.", impact: 2, valence: -5 },
+      { text: "A real industry building real products. Some hype, some substance.", impact: 4, valence: 2 },
+      { text: "Building something genuinely important, even if the business models are still shaking out.", impact: 7, valence: 5 },
+      { text: "The most consequential industry since semiconductors.", impact: 10, valence: 6 },
+    ],
+  },
+  {
+    topic: "Existential risk",
+    prompt: "Could AI pose an existential threat to humanity?",
+    options: [
+      { text: "No. This is sci-fi panic by people who watched too much Terminator.", impact: -6, valence: 3 },
+      { text: "Honestly? It's fine. It's a tool. The anxiety is way more dangerous than the technology.", impact: -5, valence: 6 },
+      { text: "Not from the technology itself, but from how people misuse it — surveillance, weapons, control.", impact: 4, valence: -5 },
+      { text: "A small but non-zero chance. Worth taking seriously without panicking.", impact: 6, valence: -2 },
+      { text: "A serious risk that's being recklessly ignored by the people building it.", impact: 8, valence: -8 },
+      { text: "The most dangerous technology humanity has ever created.", impact: 10, valence: -10 },
+    ],
+  },
+  {
+    topic: "Personal use",
+    prompt: "How much do you actually use AI in your own life?",
+    options: [
+      { text: "I avoid it on principle.", impact: -4, valence: -6 },
+      { text: "I've tried it. It's fine. I don't think about it much.", impact: -2, valence: 1 },
+      { text: "I use it regularly for specific tasks. It's a decent tool.", impact: 3, valence: 4 },
+      { text: "It's become a daily part of how I work and think.", impact: 6, valence: 7 },
+      { text: "I can't imagine going back to working without it.", impact: 8, valence: 9 },
+    ],
+  },
+  {
+    topic: "AI and medicine",
+    prompt: "AI in healthcare — what's the real story?",
+    options: [
+      { text: "Hype. The hard parts of medicine aren't pattern matching.", impact: -5, valence: -1 },
+      { text: "Some useful narrow applications, but nowhere near the sales pitch.", impact: 1, valence: 2 },
+      { text: "Already saving lives in diagnostics. The best is ahead.", impact: 7, valence: 8 },
+      { text: "Will transform medicine as profoundly as antibiotics did.", impact: 10, valence: 9 },
+    ],
+  },
+  {
+    topic: "Training data and consent",
+    prompt: "AI models are trained on data scraped from the internet — much of it without permission.",
+    options: [
+      { text: "It's straightforward theft and should be illegal.", impact: 0, valence: -9 },
+      { text: "It's ethically questionable and the creators deserve compensation.", impact: 0, valence: -5 },
+      { text: "Complicated — it's how all learning works, but the scale changes things.", impact: 0, valence: -1 },
+      { text: "Fair use. You can't own facts and patterns.", impact: 0, valence: 4 },
+      { text: "A non-issue. Human artists learn from everything they see too.", impact: 0, valence: 7 },
+    ],
+  },
+  {
+    topic: "AI and education",
+    prompt: "Students are using AI to write their essays and do their homework.",
+    options: [
+      { text: "It's a plagiarism machine that produces C-minus work. Schools are panicking over a souped-up thesaurus.", impact: -4, valence: -5 },
+      { text: "It's destroying the entire point of education.", impact: 3, valence: -8 },
+      { text: "A real problem that schools need to address, but not the end of learning.", impact: 3, valence: -3 },
+      { text: "The assignments need to change, not the students.", impact: 4, valence: 2 },
+      { text: "This is what a calculator was to math class. Adapt or get left behind.", impact: 6, valence: 5 },
+      { text: "The best thing to happen to education — personalized tutoring for everyone.", impact: 8, valence: 9 },
+    ],
+  },
+  {
+    topic: "Regulation",
+    prompt: "How should governments handle AI?",
+    options: [
+      { text: "Regulate the companies wasting resources on it, not the technology. It's not powerful enough to need its own framework.", impact: -3, valence: -4 },
+      { text: "Ban or heavily restrict it until we understand what we're dealing with.", impact: 6, valence: -7 },
+      { text: "Regulate it like pharmaceuticals — prove it's safe before you ship it.", impact: 5, valence: -3 },
+      { text: "Sensible guardrails, but don't strangle innovation.", impact: 4, valence: 2 },
+      { text: "Mostly stay out of the way. The technology is moving too fast for legislation.", impact: 6, valence: 4 },
+      { text: "Let it rip. Regulation is just protectionism for incumbents.", impact: 8, valence: 7 },
+    ],
+  },
+  {
+    topic: "The AGI question",
+    prompt: "Will we build artificial general intelligence — a system that can do anything a human can do, intellectually?",
+    options: [
+      { text: "No. We don't even understand human intelligence. This is decades away if ever.", impact: -8, valence: 0 },
+      { text: "Maybe someday, but current approaches won't get us there.", impact: -3, valence: 0 },
+      { text: "We're closer than most people think, and it could happen within a decade.", impact: 8, valence: 0 },
+      { text: "It's essentially already here, we just keep moving the goalposts.", impact: 10, valence: 3 },
+    ],
+  },
+  {
+    topic: "Who benefits?",
+    prompt: "Who's actually benefiting from AI right now?",
+    options: [
+      { text: "Nvidia, cloud providers, and grifters. That's about it.", impact: -6, valence: -7 },
+      { text: "Big tech mostly. The 'democratization' talk is marketing.", impact: 1, valence: -4 },
+      { text: "A mix — tech companies for sure, but regular people are getting real use from it too.", impact: 4, valence: 3 },
+      { text: "Anyone willing to learn how to use it. The tools are right there.", impact: 6, valence: 7 },
+      { text: "Everyone, increasingly. It's the most accessible powerful technology ever built.", impact: 8, valence: 9 },
+    ],
+  },
+  {
+    topic: "Five years from now",
+    prompt: "It's 2031. What happened with AI?",
+    options: [
+      { text: "The bubble popped. AI is still around but the hype looks embarrassing in hindsight.", impact: -7, valence: -2 },
+      { text: "Incremental progress. Useful tools, no revolution. Remember when people said this about blockchain?", impact: -3, valence: 1 },
+      { text: "Steady, real integration into work and daily life. Less dramatic than predicted, but meaningful.", impact: 4, valence: 4 },
+      { text: "Major societal shifts underway — job markets, education, and creative industries fundamentally changed.", impact: 8, valence: 0 },
+      { text: "We're living in a different world. AI reshaped everything faster than anyone expected.", impact: 10, valence: 3 },
+    ],
+  },
+  {
+    topic: "AI and the environment",
+    prompt: "AI data centers use enormous amounts of electricity and water. How much does this matter?",
+    options: [
+      { text: "We are burning staggering amounts of energy and water to run a technology that mostly generates spam. This is genuinely unconscionable.", impact: -4, valence: -8 },
+      { text: "The environmental cost would be easier to stomach if we were getting something worthwhile out of it. We're not, and that makes the waste indefensible.", impact: -2, valence: -5 },
+      { text: "It's worth keeping an eye on, but AI data centers use less electricity than streaming video in 4K, and nobody's launching a moral crusade against Netflix.", impact: -1, valence: 3 },
+      { text: "The environmental footprint is real and should be taken seriously, but the potential benefits — in medicine, science, productivity — operate on a completely different scale.", impact: 5, valence: 3 },
+      { text: "The environmental argument is wildly exaggerated by people who were already opposed to AI and went looking for the most sympathetic reason to say so.", impact: 3, valence: 6 },
+    ],
+  },
+];
+const ARCHETYPES = [
+  { name: "The Luddite (Affectionate)", person: "Emily Bender", bounds: [-10,-5,-10,-5], color: "#6893bd",
+    desc: "It doesn't work the way they claim, it's making everything worse, and you'd like your internet back, please. You can explain in precise technical detail why it's a stochastic parrot, and you will, whether or not anyone asked. You're funnier about this than people give you credit for." },
+  { name: "The Digital Hermit", person: "Jaron Lanier", bounds: [-10,-5,-5,5], color: "#5890b6",
+    desc: "You've been saying the framing is wrong since before most people had heard of any of this. AI is less a technology than a story Silicon Valley tells to consolidate power, and the story is bad. You read physical books and you don't need a language model to tell you what they mean." },
+  { name: "The Retired Engineer", person: "Dan Luu", bounds: [-10,-5,5,10], color: "#32eeb0",
+    desc: "It's a perfectly fine tool that people are losing their minds over. You used the first version, thought 'neat,' and got on with your life. You find the discourse exhausting and you have receipts about what it can and can't actually do. You are correct and also no fun at parties." },
+  { name: "The Conscientious Objector", person: "Holly Herndon", bounds: [-5,-2,-10,-3], color: "#e16a99",
+    desc: "It doesn't work well, it's doing real harm, and you've opted out on principle. You're not a technophobe — you just think this specific technology is overhyped and corrosive, and you're tired of being told you just don't understand it. You understand it fine. That's the problem." },
+  { name: "The Journalist", person: "Sam Kriss", bounds: [-5,-2,-3,1], color: "#83a1be",
+    desc: "You find the whole thing a little contemptible and a little fascinating. The products are mediocre, the people selling them are worse, and the prose it generates is a crime against the sentence. But you keep poking at it, because the cultural meaning of all this is genuinely strange." },
+  { name: "The Organic Farmer", person: "Cal Newport", bounds: [-5,-2,1,5], color: "#76d676",
+    desc: "AI is probably fine, but you're not going to use it for anything that matters. Your writing is your writing. Your thinking is your thinking. You'll accept GPS, but you're growing your own tomatoes, metaphorically, and you suspect the convenience has a hidden price." },
+  { name: "The Tired Parent", person: "Cartoons Hate Her", bounds: [-5,-2,5,10], color: "#92b8b8",
+    desc: "You don't have time for AI discourse. You used it to plan a birthday party once and it was fine. Your kids know more about this than you do. You'd like everyone — the evangelists and the doomers both — to take it down several notches and let you get on with your day." },
+  { name: "The Union Organizer", person: "Cory Doctorow", bounds: [-2,1,-10,-5], color: "#fd913b",
+    desc: "AI is a real tool being used to extract real labor value from real people without paying them. You don't care about the singularity — you care about the artists, writers, and workers getting strip-mined by capital. You're not anti-technology. You're anti-theft." },
+  { name: "The Skeptic", person: "Ed Zitron", bounds: [-2,1,-5,-1], color: "#c0a57c",
+    desc: "It's oversold, it's losing staggering amounts of money, and the harms are arriving faster than the value. You've done the math on the unit economics and it doesn't close. You are loud about this, prolific about this, and you suspect history will vindicate you." },
+  { name: "The Shrug", person: "Matt Levine", bounds: [-2,1,-1,1], color: "#a69292",
+    desc: "AI is a thing that exists and you regard it with detached amusement, like everything else. It's overhyped, sure, but so is most stuff. You'll use it when it's useful and ignore it when it isn't, and you find the discourse more interesting than the technology. You are unbothered." },
+  { name: "Free Subscription Tier", person: "Kara Swisher", bounds: [-2,1,1,5], color: "#b8a8a8",
+    desc: "It works, you use it, and the jury's still out on the big questions. You're not dismissive and you're not converted — you're empirical. You'll happily use the free version for what it's good at, but you are absolutely not paying twenty dollars a month for this. There are limits." },
+  { name: "Magnificent Seven Retail Investor", person: "Aella", bounds: [-2,1,5,10], color: "#6ada6a",
+    desc: "AI is good, broadly, vibes-wise, and you're pretty sure it's going up. You're not deeply technical about it — you just have a generally positive read and a position you feel good about. The future is exciting, the curve is your friend, and you'd rather be long than right." },
+  { name: "The Philosophy Grad Student", person: "Katja Grace", bounds: [1,3,-10,-5], color: "#bc86d7",
+    desc: "You're fascinated by what AI means more than what it does, and you take the weird downside scenarios seriously while everyone else rolls their eyes. You think in probability distributions. The 'just autocomplete' crowd and the 'it's alive' crowd strike you as equally unrigorous." },
+  { name: "The Disillusioned", person: "Molly White", bounds: [1,2,-5,-3], color: "#ad7ccd",
+    desc: "You watched this movie already with crypto and you know how it ends. It's oversold, the value is thinner than advertised, and the concrete harms are piling up while everyone argues about the rapture. You document the gap between the promise and the receipts, meticulously." },
+  { name: "The Worrier", person: "Kelsey Piper", bounds: [2,3,-5,-3], color: "#af7ce2",
+    desc: "It's real, it's powerful, and that's exactly why it worries you — not in a doom way, in a 'we should really be more careful than we're being' way. You take the capabilities seriously and the risks seriously, and you'd like the conversation to be a few degrees more sober." },
+  { name: "The Org Chart Survivor", person: "Ethan Mollick", bounds: [1,3,-3,0], color: "#c3c375",
+    desc: "Your company made you 'AI Lead' on top of your actual job. You use it, it helps sometimes, and you've stopped trying to explain to leadership what it can and can't do. You run little experiments and post the results. Just try things, you keep saying. Just try things." },
+  { name: "The B2B SaaS Consultant", person: "Matt Yglesias", bounds: [1,3,0,2], color: "#debb5f",
+    desc: "AI will quietly boost total factor productivity by some single-digit percentage and you think that's actually a huge deal, wonkily speaking. You're bullish in a spreadsheet way, not a singularity way. You've explained the Jevons paradox to someone who didn't ask." },
+  { name: "The Garage Tinkerer", person: "Simon Willison", bounds: [1,3,2,5], color: "#51e2c1",
+    desc: "You're running local models, building little tools, and having a genuinely great time. You don't care about the discourse — you care about making the thing do cool stuff. The technology is interesting and everyone arguing about it would be happier if they just opened a terminal." },
+  { name: "The Venture Capitalist", person: "Paul Graham", bounds: [1,3,5,10], color: "#ffb22f",
+    desc: "AI is the largest wealth-creation opportunity since the internet and you intend to be on the right side of it. You've written an essay about why this is the most important moment in history, and another about why the doubters lack vision. At least one of your portfolio companies does something." },
+  { name: "The Defense Contractor", person: "Peter Thiel", bounds: [3,6,-10,-6], color: "#d43c3c",
+    desc: "AI is enormously powerful and it will be used for surveillance, control, and war — and you've made your peace with that, because a human is still giving the orders, and that human might as well be holding your equity. The dystopia is coming. The only question is who runs it." },
+  { name: "The Safety Researcher", person: "Ezra Klein", bounds: [3,6,-6,-3], color: "#ff6a55",
+    desc: "You take the capability curve seriously and it keeps you up at night — not in a panic, in a 'we should really have a plan' way. You want alignment, interpretability, and guardrails before scaling. You'd like everyone to stop tweeting and read the paper." },
+  { name: "The Kontextmaschine", person: "kontextmaschine", bounds: [3,6,-3,-1], color: "#d8895b",
+    desc: "It's real, it's powerful, and you find the panic about it as tedious as the hype. You're not interested in whether AI is good or bad — you're interested in who captures the value, who loses their leverage, and which institutions are using it as a story to do what they were already doing. Same as it ever was." },
+  { name: "The True Believer", person: "Amanda Askell", bounds: [3,6,-1,2], color: "#56c1ee",
+    desc: "AI is real, it's powerful, and handled with genuine care it can be one of the best things we ever build. You think hard about its character, what it's like, what we owe it and it owes us. You're optimistic the way a thoughtful person is optimistic — clear-eyed, not starry-eyed." },
+  { name: "The Optimist", person: "Marc Andreessen", bounds: [3,6,2,5], color: "#ffce4c",
+    desc: "AI cures diseases, teaches children, liberates workers, and democratizes expertise. You see the problems but you believe the trajectory bends toward good, and the only real sin is slowing it down. Your bookshelf has both Pinker and a manifesto you wrote yourself." },
+  { name: "The Futurist", person: "Robin Hanson", bounds: [3,6,5,10], color: "#ffce59",
+    desc: "AI is transformative and you find that thrilling rather than terrifying — you'd rather model the strange new equilibrium than fear it. You'll happily walk through what an economy of digital minds does to wages, status, and property, and you mean every word of it literally." },
+  { name: "The Cassandra", person: "Eliezer Yudkowsky", bounds: [6,10,-10,-6], color: "#ff3824",
+    desc: "You see the power clearly — that's exactly what terrifies you. You're not a skeptic, you're the opposite: AI is so capable that the people building it are playing with fire in a dynamite factory, blindfolded, for a quarterly bonus. You've lost friends over this and you regret nothing." },
+  { name: "The Doomsday Prepper", person: "Connor Leahy", bounds: [6,10,-6,-2], color: "#ee2121",
+    desc: "Between deepfakes, autonomous weapons, mass surveillance, and labor collapse, AI is a Swiss army knife of civilizational risk. You're not sure which failure mode gets us first, but you're fairly confident one of them will, and you're very online about it." },
+  { name: "The Founder", person: "Sam Altman", bounds: [6,10,-2,2], color: "#e9c567",
+    desc: "This will change everything — for good or for ill, and you're studiously agnostic about which. The stakes are civilizational, the risks are real, the upside is infinite, and therefore you'll need a great deal of money and very little oversight. You warn about the fire while selling the matches." },
+  { name: "The Podcast Bro", person: "Lex Fridman", bounds: [6,10,2,6], color: "#ffb739",
+    desc: "You listened to a three-hour interview with an AI researcher and now you have opinions. Strong ones. You're long on compute and short on regulation, and you've said 'exponential' more times this month than a calculus teacher. Love is the answer, and also AGI." },
+  { name: "The Prophet", person: "Ray Kurzweil", bounds: [6,10,6,10], color: "#ffcd3e",
+    desc: "AI is the most important thing that has ever happened to our species, and it's going to be glorious. You have tabs open about longevity research and you've mentally spent the UBI checks. When the singularity comes, you want a front-row seat — ideally an uploaded one." },
+];
+const SEEDS = [[-4.9254,-3.9447],[-4.6232,-2.5776],[-2.3412,0.7331],[-3.6232,-4.2499],[-3.1489,-2.0359],[-0.9724,0.8548],[0.5251,2.4884],[-0.8709,-4.3106],[-0.2632,-2.5317],[0.4834,0.0952],[1.0485,1.9905],[2.2567,3.4456],[1.5874,-4.4281],[0.9743,-2.6591],[1.9612,-2.6360],[1.9008,-0.4955],[2.5198,1.3478],[2.8414,2.4372],[3.8259,4.6287],[2.8393,-4.5023],[3.1648,-2.9320],[3.5688,-0.3995],[3.8678,1.4799],[4.5500,3.1155],[5.6875,5.2573],[3.3652,-4.1950],[4.1860,-1.7333],[5.2766,1.9757],[6.3995,4.5300],[7.0362,5.9291]];
+const ICOV = [[0.151354, -0.117316], [-0.117316, 0.182152]];
+const VIEW = [-5.98, 8.18, -5.74, 6.87];
+
+// ---- classifier (unchanged from upstream: nearest seed in the Mahalanobis metric) ----
+
+function mdist(x, y, sx, sy) {
+  const dx = x - sx, dy = y - sy;
+  return dx * (ICOV[0][0] * dx + ICOV[0][1] * dy) + dy * (ICOV[1][0] * dx + ICOV[1][1] * dy);
+}
+
+function seedIndex(x, y) {
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < SEEDS.length; i++) {
+    const d = mdist(x, y, SEEDS[i][0], SEEDS[i][1]);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
+// An answer is an array of chosen option indices, or NONE for "none of these".
+// Picking several averages them, so a question contributes one point either way
+// and a single selection scores exactly as upstream does.
+const NONE = "none";
+
+function score(answers) {
+  let iSum = 0, vSum = 0, n = 0;
+  for (const qIdx of Object.keys(answers)) {
+    const picks = answers[qIdx];
+    if (!Array.isArray(picks) || !picks.length) continue; // unanswered, or NONE
+    const opts = QUESTIONS[+qIdx].options;
+    let qi = 0, qv = 0, m = 0;
+    for (const p of picks) {
+      const opt = opts[p];
+      if (!opt) continue;
+      qi += opt.impact; qv += opt.valence; m++;
+    }
+    if (!m) continue;
+    iSum += qi / m; vSum += qv / m; n++;
+  }
+  if (!n) return { impact: 0, valence: 0, n: 0 };
+  return { impact: iSum / n, valence: vSum / n, n };
+}
+
+// how many questions the person has engaged with (a deliberate "none" counts)
+function addressed(answers) {
+  return Object.keys(answers).filter((k) => {
+    const v = answers[k];
+    return v === NONE || (Array.isArray(v) && v.length > 0);
+  }).length;
+}
+
+// ---- reference-point links ----
+//
+// Kept here rather than in ../index.html so that file stays byte-identical to
+// upstream. Keyed by ARCHETYPES[].person; build.mjs fails if any is missing.
+// Preference: the person's own primary site where that's what they're known
+// for, Wikipedia where there's no reachable personal site or it blocks readers.
+const REFERENCE_LINKS = {
+  "Emily Bender": "https://faculty.washington.edu/ebender/",
+  "Jaron Lanier": "https://www.jaronlanier.com/",
+  "Dan Luu": "https://danluu.com/",
+  "Holly Herndon": "https://en.wikipedia.org/wiki/Holly_Herndon",
+  "Sam Kriss": "https://samkriss.substack.com/",
+  "Cal Newport": "https://calnewport.com/",
+  "Cartoons Hate Her": "https://www.cartoonshateher.com/",
+  "Cory Doctorow": "https://pluralistic.net/",
+  "Ed Zitron": "https://www.wheresyoured.at/",
+  "Matt Levine": "https://en.wikipedia.org/wiki/Matt_Levine",
+  "Kara Swisher": "https://en.wikipedia.org/wiki/Kara_Swisher",
+  "Aella": "https://knowingless.com/",
+  "Katja Grace": "https://aiimpacts.org/author/katja/",
+  "Molly White": "https://www.mollywhite.net/",
+  "Kelsey Piper": "https://www.vox.com/authors/kelsey-piper",
+  "Ethan Mollick": "https://www.oneusefulthing.org/",
+  "Matt Yglesias": "https://www.slowboring.com/",
+  "Simon Willison": "https://simonwillison.net/",
+  "Paul Graham": "https://paulgraham.com/",
+  "Peter Thiel": "https://en.wikipedia.org/wiki/Peter_Thiel",
+  "Ezra Klein": "https://www.nytimes.com/by/ezra-klein",
+  "kontextmaschine": "https://kontextmaschine.tumblr.com/",
+  "Amanda Askell": "https://askell.io/",
+  "Marc Andreessen": "https://pmarca.substack.com/",
+  "Robin Hanson": "https://www.overcomingbias.com/",
+  "Eliezer Yudkowsky": "https://en.wikipedia.org/wiki/Eliezer_Yudkowsky",
+  "Connor Leahy": "https://www.conjecture.dev/",
+  "Sam Altman": "https://blog.samaltman.com/",
+  "Lex Fridman": "https://lexfridman.com/",
+  "Ray Kurzweil": "https://www.thekurzweillibrary.com/",
+};
+
+function referenceLink(person) {
+  const href = REFERENCE_LINKS[person];
+  const label = el("span", { text: person });
+  if (!href) return label;
+  return el("a", { href, target: "_blank", rel: "noopener noreferrer", class: "saintlink", text: person });
+}
+
+// ---- answer permalinks ----
+//
+// One byte per question: 0 = unanswered, 0xff = "none of these", otherwise a
+// bitmask of the chosen option indices. Base64url'd, so a full answer set is
+// ~20 characters and rides in the fragment — it never reaches the server.
+
+const NONE_BYTE = 0xff;
+
+function encodeAnswers(answers) {
+  const bytes = new Uint8Array(QUESTIONS.length);
+  for (let q = 0; q < QUESTIONS.length; q++) {
+    const v = answers[q];
+    if (v === NONE) { bytes[q] = NONE_BYTE; continue; }
+    if (!Array.isArray(v) || !v.length) continue;
+    let mask = 0;
+    for (const i of v) if (i >= 0 && i < 7) mask |= 1 << i;
+    bytes[q] = mask;
+  }
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeAnswers(str) {
+  try {
+    const b64 = str.replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4));
+    if (bin.length !== QUESTIONS.length) return null;
+    const answers = {};
+    for (let q = 0; q < QUESTIONS.length; q++) {
+      const b = bin.charCodeAt(q);
+      if (b === 0) continue;
+      if (b === NONE_BYTE) { answers[q] = NONE; continue; }
+      const picks = [];
+      for (let i = 0; i < QUESTIONS[q].options.length; i++) if (b & (1 << i)) picks.push(i);
+      if (picks.length) answers[q] = picks;
+    }
+    return answers;
+  } catch (e) {
+    return null; // malformed link; fall back to a fresh start
+  }
+}
+
+function shareUrl(answers) {
+  const u = new URL(location.href);
+  u.hash = "a=" + encodeAnswers(answers);
+  return u.toString();
+}
+
+// ---- room + identity ----
+
+const ADJECTIVES = ["Amber", "Brisk", "Candid", "Dapper", "Eager", "Fleet", "Gentle", "Hazel",
+  "Ivory", "Jolly", "Keen", "Lucid", "Mellow", "Nimble", "Opal", "Placid", "Quiet", "Russet",
+  "Solemn", "Tidy", "Umber", "Velvet", "Wry", "Zesty"];
+const ANIMALS = ["Otter", "Heron", "Marten", "Falcon", "Badger", "Lynx", "Puffin", "Ibex",
+  "Raven", "Seal", "Tapir", "Vole", "Wren", "Yak", "Bison", "Crane", "Dormouse", "Egret",
+  "Ferret", "Gannet", "Hare", "Jackdaw", "Kestrel", "Loon"];
+
+function anonHandle() {
+  const a = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const b = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  return a + " " + b;
+}
+
+function roomFromUrl() {
+  const p = new URLSearchParams(location.search);
+  const raw = (p.get("room") || "").trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9-]{0,31}$/.test(raw) ? raw : "";
+}
+
+// Taking the quiz is the default; joining a group is opt-in. A room only exists
+// if the URL named one (a shared invite link) or the person chose to share
+// afterwards, so nothing is attributed to anyone until they ask for it.
+const URL_ROOM = roomFromUrl();
+const IS_BOARD = new URLSearchParams(location.search).has("board");
+
+// v4: skipping is no longer allowed, so part-finished v3 state is invalid.
+// (v3 gave solo answers their own storage scope, separate from any room.)
+let ROOM = URL_ROOM;
+const KEY = (k) => "aicompass:v4:" + (ROOM || "solo") + ":" + k;
+
+function load(k, fallback) {
+  try {
+    const v = localStorage.getItem(KEY(k));
+    return v === null ? fallback : JSON.parse(v);
+  } catch (e) { return fallback; }
+}
+function save(k, v) {
+  try { localStorage.setItem(KEY(k), JSON.stringify(v)); } catch (e) { /* private mode */ }
+}
+
+// ---- state ----
+
+// A shared link (#a=...) wins over whatever this browser had saved, so opening
+// someone else's result shows theirs rather than silently resuming yours.
+const linked = location.hash.startsWith("#a=") ? decodeAnswers(location.hash.slice(3)) : null;
+
+const state = {
+  // With a room in the URL you land in that room's flow; without one you go
+  // straight into the quiz (or back to your own saved result).
+  view: ROOM
+    ? (IS_BOARD ? "board" : (linked || load("answers", null) ? "result" : "intro"))
+    : (linked || load("answers", null) ? "result" : "quiz"),
+  // An invite link already says "I want to be on this board" — but the name
+  // is still asked for at the end, once you can see what it goes next to.
+  joining: !!URL_ROOM,
+  name: load("name", "") || anonHandle(),
+  nameWasLoaded: !!load("name", ""),
+  answers: linked || load("answers", null) || {},
+  // A linked result belongs to whoever sent it, so don't offer to post it to the
+  // board under this browser's identity until the viewer takes it themselves.
+  fromLink: !!linked,
+  current: 0,
+  entryId: load("entryId", null),
+  others: [],
+  hover: null,          // id of the respondent dot under the pointer
+  region: null,         // {x, y, idx} of the territory under the pointer
+  highlightIdx: -1,     // archetype to emphasise on the all-points map
+  backTo: "result",
+  status: "",
+  statusErr: false,
+  submitting: false,
+};
+
+// ---- API ----
+
+async function api(method, path, body) {
+  const res = await fetch("/api/room/" + encodeURIComponent(ROOM) + path, {
+    method,
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch (e) { /* non-JSON error page */ }
+  if (!res.ok) throw new Error((data && data.error) || ("HTTP " + res.status));
+  return data;
+}
+
+// True exactly when the join form's inputs are on screen. state.joining alone
+// isn't enough: it defaults to true for invite links, including on the board.
+function joinFormOpen() {
+  return state.joining && state.view === "result" && !state.fromLink && !state.entryId;
+}
+
+// Insert or replace an entry in the local board without waiting for a re-list.
+function mergeEntry(entry) {
+  const rest = state.others.filter((e) => e.id !== entry.id);
+  rest.push(entry);
+  rest.sort((a, b) => (a.t || 0) - (b.t || 0));
+  state.others = rest;
+}
+
+async function refresh() {
+  if (!ROOM) return;
+  try {
+    const data = await api("GET", "");
+    // D1 is strongly consistent, so a read after our own write always contains
+    // it — no need to defend against a read that's missing our entry (the KV
+    // version had to pin it locally).
+    state.others = data.entries || [];
+    if (state.status && state.statusErr) { state.status = ""; state.statusErr = false; }
+  } catch (e) {
+    state.status = "Can't reach the board (" + e.message + "). Retrying…";
+    state.statusErr = true;
+  }
+  // Rendering rebuilds the join form's inputs, so a 4s poll landing mid-typing
+  // would wipe a half-entered name. The counts catch up on the next poll.
+  if (!joinFormOpen()) render();
+}
+
+async function submit() {
+  if (!ROOM) return; // solo: nothing is ever sent
+  const { impact, valence, n } = score(state.answers);
+  if (!n) return;
+  state.submitting = true;
+  state.status = "Saving…";
+  state.statusErr = false;
+  render();
+  try {
+    const data = await api("POST", "", {
+      id: state.entryId || undefined,
+      name: state.name,
+      i: impact,
+      v: valence,
+      a: seedIndex(impact, valence),
+    });
+    state.entryId = data.id;
+    save("entryId", data.id);
+    // Show yourself without waiting for the next poll. The write response
+    // already carries the stored row, so this is just avoiding a round trip.
+    if (data.entry) mergeEntry(data.entry);
+    state.status = "Saved. You're on the board.";
+  } catch (e) {
+    state.status = "Couldn't save: " + e.message;
+    state.statusErr = true;
+  }
+  state.submitting = false;
+  render();
+  refresh();
+}
+
+// ---- chart ----
+
+const CHART_PAD = 44;
+
+function drawChart(canvas, opts) {
+  const size = opts.size;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = size * dpr;
+  canvas.height = size * dpr;
+  canvas.style.width = size + "px";
+  canvas.style.height = size + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = CHART_PAD, plot = size - pad * 2;
+  const [vx0, vx1, vy0, vy1] = VIEW;
+  const xS = (v) => pad + ((v - vx0) / (vx1 - vx0)) * plot;
+  const yS = (v) => pad + ((vy1 - v) / (vy1 - vy0)) * plot;
+  const xI = (px) => vx0 + ((px - pad) / plot) * (vx1 - vx0);
+  const yI = (py) => vy1 - ((py - pad) / plot) * (vy1 - vy0);
+
+  ctx.fillStyle = "#1a1a2e";
+  ctx.fillRect(0, 0, size, size);
+
+  const hoveredRegionIdx = opts.region ? opts.region.idx : -1;
+  const STEP = 5;
+  for (let py = pad; py < pad + plot; py += STEP) {
+    for (let px = pad; px < pad + plot; px += STEP) {
+      const i = seedIndex(xI(px + STEP / 2), yI(py + STEP / 2));
+      ctx.fillStyle = ARCHETYPES[i].color;
+      // the territory under the pointer lights up, so the label has something
+      // to point at rather than naming an invisible boundary
+      ctx.globalAlpha = i === hoveredRegionIdx ? 0.62
+        : i === opts.highlightIdx ? 0.5
+        : (opts.big ? 0.26 : 0.2);
+      ctx.fillRect(px, py, STEP, STEP);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // seed dots + numbers, for the "all compass points" map
+  if (opts.showNumbers) {
+    SEEDS.forEach((s, i) => {
+      const sx = xS(s[0]), sy = yS(s[1]);
+      ctx.fillStyle = ARCHETYPES[i].color;
+      ctx.globalAlpha = i === opts.highlightIdx ? 1 : 0.8;
+      ctx.beginPath(); ctx.arc(sx, sy, i === opts.highlightIdx ? 4 : 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(String(i + 1), sx + 5, sy);
+    });
+    ctx.globalAlpha = 1; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  }
+
+  // axis cross
+  const cx = xS(0), cy = yS(0);
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, pad); ctx.lineTo(cx, pad + plot); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad, cy); ctx.lineTo(pad + plot, cy); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  ctx.font = "bold 9px system-ui, sans-serif";
+  ctx.textAlign = "right"; ctx.fillText("OVERHYPED", cx - 8, cy - 6);
+  ctx.textAlign = "left"; ctx.fillText("TRANSFORMATIVE", cx + 8, cy - 6);
+  ctx.textAlign = "center"; ctx.fillText("GOOD", cx, pad - 10);
+  ctx.fillText("BAD", cx, pad + plot + 16);
+
+  // everyone else's positions, with their screen coords cached for hit-testing
+  const hits = [];
+  const r = opts.big ? 8 : 6;
+  (opts.others || []).forEach((e) => {
+    const px = xS(e.i), py = yS(e.v);
+    hits.push({ x: px, y: py, entry: e });
+    const mine = opts.myId && e.id === opts.myId;
+    if (mine) return; // drawn last, on top
+    ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+    ctx.fillStyle = ARCHETYPES[e.a] ? ARCHETYPES[e.a].color : "#fff";
+    ctx.globalAlpha = 0.75;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = "rgba(26,26,46,0.85)";
+    ctx.stroke();
+  });
+
+  // own point last so it always reads on top
+  const own = opts.point;
+  if (own) {
+    const px = xS(own[0]), py = yS(own[1]);
+    const grad = ctx.createRadialGradient(px, py, 0, px, py, 22);
+    grad.addColorStop(0, "rgba(255,255,255,0.5)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(px, py, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = opts.highlightIdx >= 0 ? ARCHETYPES[opts.highlightIdx].color : "#fff";
+    ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+
+  // On the projected board, put names on the chart itself — reading a dot off a
+  // legend doesn't work from the back of a room. Greedy vertical de-collision;
+  // above ~28 people the labels stop being legible anyway, so fall back to chips.
+  if (opts.big && hits.length && hits.length <= 28) {
+    ctx.font = "600 12px system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    const placed = [];
+    for (const h of hits.slice().sort((a, b) => a.y - b.y)) {
+      const w = ctx.measureText(h.entry.name).width;
+      const flip = h.x + r + 8 + w > size - 4; // label would run off the right edge
+      let lx = flip ? h.x - r - 8 - w : h.x + r + 8;
+      let ly = h.y;
+      // nudge down past any label already occupying this slot
+      for (const p of placed) {
+        if (Math.abs(p.ly - ly) < 15 && lx < p.lx + p.w + 6 && lx + w + 6 > p.lx) {
+          ly = p.ly + 15;
+        }
+      }
+      placed.push({ lx, ly, w });
+      ctx.fillStyle = "rgba(12,12,24,0.72)";
+      ctx.fillRect(lx - 4, ly - 8, w + 8, 16);
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.fillText(h.entry.name, lx, ly);
+    }
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+  }
+
+  // hovered/tapped label
+  if (opts.hover) {
+    const h = hits.find((p) => p.entry.id === opts.hover);
+    if (h) {
+      const label = h.entry.name;
+      ctx.font = "600 12px system-ui, sans-serif";
+      const w = ctx.measureText(label).width + 14;
+      let lx = h.x - w / 2;
+      lx = Math.max(2, Math.min(size - w - 2, lx));
+      const ly = h.y - r - 26;
+      ctx.fillStyle = "rgba(12,12,24,0.92)";
+      ctx.beginPath();
+      (ctx.roundRect ? ctx.roundRect(lx, ly, w, 22, 6) : ctx.rect(lx, ly, w, 22));
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(label, lx + w / 2, ly + 11);
+      ctx.textBaseline = "alphabetic";
+    }
+  }
+
+  // Region label: name the territory under the pointer. Without this the map is
+  // 30 unlabelled colour patches, which is useless on a projected board.
+  if (opts.region) {
+    const { x: rx, y: ry, idx } = opts.region;
+    const a = ARCHETYPES[idx];
+    ctx.font = "600 12px system-ui, sans-serif";
+    const w = ctx.measureText(a.name).width + 16;
+    let lx = Math.max(2, Math.min(size - w - 2, rx - w / 2));
+    let ly = ry + 16;
+    if (ly + 24 > size) ly = ry - 34;
+    ctx.fillStyle = "rgba(12,12,24,0.92)";
+    ctx.beginPath();
+    (ctx.roundRect ? ctx.roundRect(lx, ly, w, 22, 6) : ctx.rect(lx, ly, w, 22));
+    ctx.fill();
+    ctx.strokeStyle = a.color; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(a.name, lx + w / 2, ly + 11);
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  }
+
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad, pad, plot, plot);
+
+  canvas.__hits = hits;
+  canvas.__geom = { pad, plot, size, xI, yI };
+}
+
+// Renders a chart into a container and keeps it correctly sized as the
+// container changes (rotation, window resize) — the upstream version draws once.
+function mountChart(container, opts) {
+  const canvas = document.createElement("canvas");
+  container.appendChild(canvas);
+
+  const paint = () => {
+    const max = opts.maxSize || (opts.big ? 700 : 460);
+    const size = Math.max(240, Math.min(container.clientWidth, max));
+    drawChart(canvas, Object.assign({}, opts, { size, hover: state.hover, region: state.region }));
+  };
+  paint();
+
+  if (typeof ResizeObserver !== "undefined") {
+    const ro = new ResizeObserver(paint);
+    ro.observe(container);
+  } else {
+    window.addEventListener("resize", paint);
+  }
+
+  const pick = (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
+
+    // a person's dot wins over the region they're standing in
+    let found = null, bestD = 18 * 18;
+    for (const h of canvas.__hits || []) {
+      const d = (h.x - x) * (h.x - x) + (h.y - y) * (h.y - y);
+      if (d < bestD) { bestD = d; found = h.entry.id; }
+    }
+
+    let region = null;
+    const g = canvas.__geom;
+    if (!found && g && x >= g.pad && x <= g.pad + g.plot && y >= g.pad && y <= g.pad + g.plot) {
+      region = { x, y, idx: seedIndex(g.xI(x), g.yI(y)) };
+    }
+
+    const changed = found !== state.hover ||
+      (region ? region.idx : null) !== (state.region ? state.region.idx : null) ||
+      (region && state.region && (region.x !== state.region.x || region.y !== state.region.y));
+    state.hover = found;
+    state.region = region;
+    if (changed) paint();
+  };
+  canvas.addEventListener("mousemove", pick);
+  canvas.addEventListener("click", pick);
+  canvas.addEventListener("mouseleave", () => {
+    if (state.hover || state.region) { state.hover = null; state.region = null; paint(); }
+  });
+  return canvas;
+}
+
+// ---- tiny DOM helper ----
+
+function el(tag, attrs, children) {
+  const node = document.createElement(tag);
+  for (const k in attrs || {}) {
+    const v = attrs[k];
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.slice(0, 2) === "on") node.addEventListener(k.slice(2), v);
+    else if (k === "style") node.setAttribute("style", v);
+    else node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of [].concat(children || [])) {
+    if (c === null || c === undefined || c === false) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+// ---- views ----
+
+function viewIntro() {
+  // Deliberately no name field. Following an invite link shouldn't mean naming
+  // yourself before you know what the name gets attached to — it's asked for on
+  // the result screen instead, exactly as in the solo opt-in flow.
+  const start = () => { state.view = "quiz"; render(); };
+
+  return el("div", { class: "wrap" }, [
+    el("h1", { text: "The AI Compass" }),
+    el("p", { class: "sub" }, [
+      "Room ", el("span", { class: "roomcode", text: ROOM }), " · ",
+      state.others.length + (state.others.length === 1 ? " person" : " people") + " on the board",
+    ]),
+    el("p", { class: "hint", text: QUESTIONS.length + " questions. Pick as many options as apply — and if none fits exactly, pick the closest." }),
+    // The sharpest expert criticism of the original was that it treats "AI" as
+    // one thing. Scoping it up front costs nothing and heads off the objection
+    // that e.g. medical advances aren't coming from chatbots.
+    el("p", { class: "scopenote" }, [
+      el("strong", { text: "\"AI\" here means generative AI — chatbots and LLMs" }),
+      " — as it's discussed in public, not machine learning generally. " +
+      "Narrow ML in medicine, protein folding, and forecasting is a different subject and mostly predates this wave.",
+    ]),
+    el("p", { class: "fieldhint", style: "text-align:center",
+      text: state.entryId
+        ? "You're already on this board — finishing again moves your dot."
+        : "Nothing goes on the board until you've seen your result and chosen a name." }),
+    el("div", { class: "row" }, [
+      el("button", { class: "cta", onclick: start, text: "Start" }),
+      el("button", { class: "btn", text: "Just show me the board",
+        onclick: () => { state.view = "board"; render(); } }),
+    ]),
+  ]);
+}
+
+function viewQuiz() {
+  const q = QUESTIONS[state.current];
+  const answered = addressed(state.answers);
+  const selected = state.answers[state.current];
+  const picks = Array.isArray(selected) ? selected : [];
+  const isNone = selected === NONE;
+  const isAnswered = isNone || picks.length > 0;
+  const isLast = state.current === QUESTIONS.length - 1;
+
+  // Toggle, because several options can be true at once — the most common
+  // complaint about the original was being forced to pick one of three
+  // simultaneously-valid answers.
+  const toggle = (i) => {
+    const next = picks.includes(i) ? picks.filter((p) => p !== i) : picks.concat(i).sort((a, b) => a - b);
+    if (next.length) state.answers[state.current] = next;
+    else delete state.answers[state.current];
+    save("answers", state.answers);
+    render();
+  };
+
+  const chooseNone = () => {
+    if (isNone) delete state.answers[state.current];
+    else state.answers[state.current] = NONE;
+    save("answers", state.answers);
+    render();
+  };
+
+  return el("div", { class: "wrap" }, [
+    el("h1", { text: "The AI Compass" }),
+    ROOM
+      ? el("p", { class: "sub" }, ["Room ", el("span", { class: "roomcode", text: ROOM })])
+      : el("p", { class: "sub", text: "Where do you actually land on AI?" }),
+    el("div", { class: "bar" }, [
+      el("i", { style: "width:" + (answered / QUESTIONS.length) * 100 + "%" }),
+    ]),
+    el("div", { class: "topic", text: q.topic }),
+    el("div", { class: "count", text: (state.current + 1) + " / " + QUESTIONS.length }),
+    el("div", { class: "prompt", text: q.prompt }),
+    // No skipping: an unanswered question would be scored over a smaller
+    // denominator, which inflates the variance of the result and throws people
+    // outward into extreme archetypes. Forcing a least-bad choice keeps every
+    // result computed over the same 15 questions.
+    el("p", { class: "multihint",
+      text: "Pick as many as apply. If none fits exactly, choose the least bad one — every question counts." }),
+    el("div", { class: "opts", role: "group", "aria-label": q.prompt },
+      q.options.map((opt, i) =>
+        el("button", {
+          class: "opt", text: opt.text, "aria-pressed": picks.includes(i) ? "true" : "false",
+          onclick: () => toggle(i),
+        })
+      ).concat([
+        el("button", {
+          class: "opt none", text: "None of these fit my view",
+          "aria-pressed": isNone ? "true" : "false", onclick: chooseNone,
+        }),
+      ])),
+    picks.length > 1
+      ? el("p", { class: "multihint", text: picks.length + " selected — they'll be averaged." })
+      : null,
+    el("div", { class: "nav" }, [
+      el("button", {
+        class: "ghost", text: "← Back", disabled: state.current === 0,
+        onclick: () => { if (state.current > 0) { state.current--; render(); } },
+      }),
+      el("div", { class: "row", style: "margin:0" }, [
+        // No Skip. Advancing requires an answer, so every result is computed
+        // over all 15 questions.
+        !isLast
+          ? el("button", { class: "btn", text: "Next →", disabled: !isAnswered,
+              onclick: () => { state.current++; render(); } })
+          : el("button", { class: "cta", text: "See my result", disabled: !isAnswered,
+              onclick: () => {
+                state.view = "result"; render();
+                // A retake by someone already on the board moves their dot. A
+                // first run posts nothing yet — the name comes next.
+                if (state.entryId) submit();
+              } }),
+      ]),
+    ]),
+  ]);
+}
+
+function roster() {
+  if (!state.others.length) return null;
+  const sorted = state.others.slice().sort((a, b) => a.name.localeCompare(b.name));
+  return el("div", { class: "roster" }, sorted.map((e) =>
+    el("span", {
+      class: "chip" + (e.id === state.entryId ? " me" : ""),
+      onmouseenter: () => { state.hover = e.id; render(); },
+      onmouseleave: () => { state.hover = null; render(); },
+      title: ARCHETYPES[e.a] ? ARCHETYPES[e.a].name : "",
+    }, [
+      el("i", { style: "background:" + (ARCHETYPES[e.a] ? ARCHETYPES[e.a].color : "#fff") }),
+      e.name,
+    ])
+  ));
+}
+
+// Opting in to a group: adopt the room, carry the already-given answers across
+// into that room's storage scope, put the room in the URL so a reload stays put,
+// and only then post anything.
+function joinRoom(code, name) {
+  const room = code.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "").slice(0, 32);
+  if (!room) {
+    state.status = "Pick a room code first.";
+    state.statusErr = true;
+    render();
+    return;
+  }
+  const answers = state.answers;
+  ROOM = room;
+  state.name = (name || "").trim() || anonHandle();
+  state.answers = answers;
+  state.entryId = load("entryId", null); // may already have posted to this room before
+  state.joining = false;
+  save("name", state.name);
+  save("answers", state.answers);
+
+  const u = new URL(location.href);
+  u.searchParams.set("room", room);
+  u.hash = "";
+  history.replaceState(null, "", u.toString());
+
+  render();
+  submit();
+  refresh();
+}
+
+async function copyLink() {
+  const url = shareUrl(state.answers);
+  try {
+    await navigator.clipboard.writeText(url);
+    state.status = "Link copied.";
+  } catch (e) {
+    // clipboard needs a secure context and permission; put it in the URL bar instead
+    history.replaceState(null, "", url);
+    state.status = "Couldn't copy — the link is in your address bar.";
+  }
+  state.statusErr = false;
+  render();
+}
+
+function viewAll() {
+  const chartBox = el("div", { style: "max-width:560px;margin:0 auto" });
+  const node = el("div", { class: "wrap" }, [
+    el("h1", { text: "All " + ARCHETYPES.length + " compass points" }),
+    el("p", { class: "sub",
+      text: "The whole map. Hover or tap a region on the chart to name it; the numbers match the list." }),
+    chartBox,
+    el("div", { class: "alllist" }, ARCHETYPES.map((a, i) =>
+      el("div", { class: "allrow" + (i === state.highlightIdx ? " on" : "") }, [
+        el("div", { class: "allnum", text: String(i + 1) }),
+        el("div", { class: "allswatch", style: "background:" + a.color }),
+        el("div", { style: "flex:1" }, [
+          el("div", { class: "allname", style: "color:" + a.color, text: a.name }),
+          el("div", { class: "saint" }, ["reference point: ", referenceLink(a.person)]),
+          el("div", { class: "adesc", style: "font-size:14px", text: a.desc }),
+        ]),
+      ])
+    )),
+    el("div", { class: "row" }, [
+      el("button", { class: "btn", text: "← Back",
+        onclick: () => { state.view = state.backTo || "result"; render(); } }),
+    ]),
+  ]);
+  queueMicrotask(() => mountChart(chartBox, {
+    showNumbers: true,
+    highlightIdx: state.highlightIdx >= 0 ? state.highlightIdx : -1,
+    size: 560,
+  }));
+  return node;
+}
+
+function joinForm() {
+  // When the room came from the URL there's nothing to choose: don't make people
+  // retype a code they were handed, and don't let them mistype it into a board
+  // of one. Only the name is missing.
+  const fixed = !!URL_ROOM;
+  const roomInput = fixed ? null : el("input", {
+    type: "text", placeholder: "e.g. offsite-2026", "aria-label": "Room code", value: "",
+  });
+  const nameInput = el("input", {
+    type: "text", maxlength: "24", "aria-label": "Your display name", value: state.name,
+  });
+  const go = () => joinRoom(fixed ? ROOM : roomInput.value, nameInput.value);
+  const onEnter = (e) => { if (e.key === "Enter") go(); };
+  if (roomInput) roomInput.addEventListener("keydown", onEnter);
+  nameInput.addEventListener("keydown", onEnter);
+
+  return el("div", { class: "joinbox" }, [
+    el("div", { class: "eyebrow", text: fixed ? "Post to the group" : "Share with a group" }),
+    el("p", { class: "hint", style: "text-align:left;margin:0 0 14px" }, fixed
+      ? ["Your dot and display name go on the board for room ",
+         el("span", { class: "roomcode", text: ROOM }),
+         ", visible to anyone with that code."]
+      : ["Everyone in the group uses the same room code. Your position and display name become visible to anyone with that code."]),
+    roomInput ? el("label", { text: "Room code" }) : null,
+    roomInput,
+    el("label", { style: fixed ? "" : "margin-top:12px", text: "Show up as" }),
+    nameInput,
+    el("p", { class: "fieldhint",
+      text: state.nameWasLoaded
+        ? "This is the name you used last time — change it if you'd like."
+        : "This is what the group sees next to your dot — your real name, or anything you like. We've filled in a random pseudonym; keep it to stay anonymous." }),
+    el("div", { class: "row" }, [
+      el("button", { class: "cta", text: "Post to the group", onclick: go }),
+      el("button", { class: "ghost", text: fixed ? "Not now" : "Cancel",
+        onclick: () => { state.joining = false; render(); } }),
+    ]),
+  ]);
+}
+
+function viewResult() {
+  const { impact, valence, n } = score(state.answers);
+  const idx = seedIndex(impact, valence);
+  const a = ARCHETYPES[idx];
+  const chartBox = el("div", { style: "max-width:460px;margin:0 auto" });
+
+  const node = el("div", { class: "wrap" }, [
+    el("h1", { text: state.fromLink ? "A shared AI Compass" : "Your AI Compass" }),
+    el("p", { class: "sub" }, ROOM
+      ? [n + " of " + QUESTIONS.length + " scored · room ", el("span", { class: "roomcode", text: ROOM })]
+      : [n + " of " + QUESTIONS.length + " scored"]),
+    chartBox,
+    el("div", { class: "card" }, [
+      el("div", { class: "eyebrow", text: state.fromLink ? "They are..." : "You are..." }),
+      el("div", { class: "aname", style: "color:" + a.color, text: a.name }),
+      el("div", { class: "saint" }, ["reference point: ", referenceLink(a.person)]),
+      el("div", { class: "adesc", text: a.desc }),
+      el("div", { class: "coords",
+        text: "Impact: " + (impact > 0 ? "+" : "") + impact.toFixed(1) +
+              "   •   Valence: " + (valence > 0 ? "+" : "") + valence.toFixed(1) }),
+    ]),
+    state.fromLink
+      ? el("p", { class: "hint", style: "margin-top:18px",
+          text: "You're looking at someone else's result from a shared link. Take it yourself to get on the board." })
+      : ROOM
+        ? el("p", { class: "sub", style: "margin-top:22px",
+            text: state.others.length
+              ? state.others.length + (state.others.length === 1 ? " person" : " people") + " on the board so far"
+              : "Nobody else has submitted yet." })
+        : null,
+    state.fromLink || !ROOM ? null : roster(),
+
+    // Nothing is posted until there's a name to post it under — an invite link
+    // in the URL is no exception. entryId set means it's already up there.
+    !state.fromLink && !state.entryId && !state.joining
+      ? el("div", { style: "text-align:center;margin-top:22px" }, [
+          el("button", { class: "btn", text: ROOM ? "Put me on the board" : "Share with a group",
+            onclick: () => { state.joining = true; state.status = ""; state.statusErr = false; render(); } }),
+          el("p", { class: "hint", style: "margin-top:10px",
+            text: "Your answers stay on this device unless you choose this." }),
+        ])
+      : null,
+    joinFormOpen() ? joinForm() : null,
+
+    el("div", { style: "text-align:center;margin-top:18px" }, [
+      el("button", { class: "linkish", style: "font-size:13px",
+        text: "Show me all " + ARCHETYPES.length + " compass points →",
+        onclick: () => {
+          state.backTo = "result"; state.highlightIdx = idx; state.view = "all";
+          state.region = null; render(); window.scrollTo(0, 0);
+        } }),
+    ]),
+    el("div", { class: "row" }, [
+      ROOM ? el("button", { class: "btn", text: "Open the big board",
+        onclick: () => { state.view = "board"; render(); } }) : null,
+      el("button", { class: "btn", text: "Copy link to these answers", onclick: copyLink }),
+      el("button", { class: state.fromLink ? "cta" : "btn", text: state.fromLink ? "Take it myself" : "Retake",
+        onclick: () => {
+          state.answers = {}; state.current = 0; state.view = "quiz";
+          state.fromLink = false; state.joining = !!URL_ROOM;
+          if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+          save("answers", state.answers); render();
+        } }),
+    ]),
+    el("div", { class: "status" + (state.statusErr ? " err" : ""), text: state.status }),
+  ]);
+
+  queueMicrotask(() => mountChart(chartBox, {
+    point: [impact, valence], highlightIdx: idx, others: state.others, myId: state.entryId,
+  }));
+  return node;
+}
+
+function viewBoard() {
+  const chartBox = el("div", { style: "max-width:700px;margin:0 auto" });
+  const mine = state.entryId ? state.others.find((e) => e.id === state.entryId) : null;
+
+  const node = el("div", { class: "wrap" }, [
+    el("h1", { text: "Where the room landed" }),
+    el("p", { class: "sub" }, [
+      state.others.length + (state.others.length === 1 ? " response" : " responses") + " · room ",
+      el("span", { class: "roomcode", text: ROOM }), " · updates automatically",
+    ]),
+    chartBox,
+    roster(),
+    el("div", { class: "row" }, [
+      el("button", { class: "btn", text: state.entryId ? "Back to my result" : "Take the quiz",
+        onclick: () => { state.view = state.entryId ? "result" : "intro"; render(); } }),
+      el("button", { class: "btn", text: "All " + ARCHETYPES.length + " compass points",
+        onclick: () => {
+          state.backTo = "board"; state.highlightIdx = mine ? mine.a : -1;
+          state.view = "all"; state.region = null; render(); window.scrollTo(0, 0);
+        } }),
+    ]),
+    el("div", { class: "status" + (state.statusErr ? " err" : ""), text: state.status }),
+  ]);
+
+  queueMicrotask(() => mountChart(chartBox, {
+    others: state.others, myId: state.entryId, big: true,
+    point: mine ? [mine.i, mine.v] : null,
+    highlightIdx: mine ? mine.a : -1,
+  }));
+  return node;
+}
+
+// ---- render loop ----
+
+function render() {
+  const root = document.getElementById("root");
+  root.textContent = "";
+  document.body.classList.toggle("board", state.view === "board");
+  const view =
+    state.view === "intro" ? viewIntro() :
+    state.view === "quiz" ? viewQuiz() :
+    state.view === "result" ? viewResult() :
+    state.view === "all" ? viewAll() :
+    viewBoard();
+  root.appendChild(view);
+}
+
+render();
+
+// ROOM can be adopted mid-session (opting in to a group), so these re-check it
+// each time rather than being installed conditionally at startup.
+if (ROOM) refresh();
+setInterval(() => {
+  if (!ROOM) return;
+  if (state.view === "board" || state.view === "result" || state.view === "intro") refresh();
+}, 4000);
+document.addEventListener("visibilitychange", () => {
+  if (ROOM && !document.hidden) refresh();
+});
+
+</script>
+</body>
+</html>
